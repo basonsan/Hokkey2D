@@ -22,6 +22,7 @@ public class PlayerControl : MonoBehaviour
     private bool isTrigerBorderGateOn;
     private float strongStrike;
     private PlayerControl thisPlayer;
+    private bool isPuckOnMe;
 
     public event Action<float, Gate> StrikePuck;
 
@@ -33,34 +34,57 @@ public class PlayerControl : MonoBehaviour
         isTrigerBorderGateOn = false;
         puck.OntrigerPlaer += CheckPlayer;
         strongStrike = minStrongStrike;
+        isPuckOnMe = false;
     }
 
     private void CheckPlayer(PlayerControl player)
     {
-        Debug.Log(player);
         if (gameObject == player.gameObject)
         {
-            Debug.Log("itsMe");
+            //Debug.Log("itsMe");
+            isPuckOnMe = true;
         } else
         {
-            Debug.Log("NoMe");
+            //Debug.Log("NoMe");
         }
     }
 
     void Update()
     {
+        if (isPuckOnMe)
+        {
+            if (Input.GetMouseButtonUp(0))
+            {
+                _StrikePuck();
+            }
+            if (Input.GetMouseButtonDown(0))
+            {
+                strongStrike += Time.deltaTime;
+            }
+            if (strongStrike > minStrongStrike)
+            {
+                strongStrike += Time.deltaTime;
+                if (strongStrike > maxStrongStrike)
+                {
+                    strongStrike = minStrongStrike / 2;
+                    _StrikePuck();
+                }
+                return;
+            }
+        }
         Move();
-        if(Input.GetMouseButtonDown(0))
-        {
-            strongStrike += Time.deltaTime;
-        }
-        if (Input.GetMouseButtonUp(0))
-        {
-            StrikePuck.Invoke(strongStrike, gate);
-            strongStrike = minStrongStrike;
-            bcTriger.enabled = false;
-            bcView.enabled = false;
-        }
+    }
+
+
+
+    private void _StrikePuck()
+    {
+        StrikePuck.Invoke(strongStrike, gate);
+        strongStrike = minStrongStrike;
+        bcTriger.enabled = false;
+        bcView.enabled = false;
+        isPuckOnMe = false;
+        return;
     }
 
     private void Move()
