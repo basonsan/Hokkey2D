@@ -36,7 +36,11 @@ public class PuckMove : MonoBehaviour
             //transform.position = Vector3.MoveTowards(transform.position, target, speedPuck * Time.deltaTime);
             //GetComponent<Rigidbody2D>().MovePosition(transform.position + target * Time.deltaTime);
             transform.position += velocity * speedPuck * Time.deltaTime;
-            speedPuck -= Time.deltaTime * slowRate;
+            //speedPuck -= Time.deltaTime * slowRate * Mathf.Sqrt(speedPuck);
+            speedPuck -=  Mathf.Sqrt(speedPuck * Time.deltaTime * slowRate);
+
+
+
         }
         
     }
@@ -60,7 +64,6 @@ public class PuckMove : MonoBehaviour
             if (transform.position.x <= pointStadion[0].position.x || transform.position.x >= pointStadion[4].position.x)
             {
                 velocity.x *= UnityEngine.Random.Range(-0.8f, -1f);
-
                 isVelositySwapX = true;
             }
             if (transform.position.y <= pointStadion[1].position.y || transform.position.y >= pointStadion[2].position.y)
@@ -114,7 +117,5 @@ public class PuckMove : MonoBehaviour
         velocity = target - transform.position;
         invertVelocity = 3.9f / velocity.x;
         velocity *= invertVelocity;
-        Debug.Log(velocity);
     }
-
 }
