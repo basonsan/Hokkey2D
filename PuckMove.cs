@@ -10,6 +10,8 @@ public class PuckMove : MonoBehaviour
     //начинаем указывать слева снизу
     [SerializeField] private Transform[] pointStadion;
 
+    private PlayerControl thisPlayerControl;
+
     private Transform player;
     private bool isPlayerTakePuck;
     private float speedPuck;
@@ -17,6 +19,9 @@ public class PuckMove : MonoBehaviour
     private Vector3 velocity;
     private bool isVelositySwapX;
     private bool isVelositySwapY;
+    private string stickTrigerName = "StickTriger";
+    [SerializeField] private Transform arrowDirection;
+    [SerializeField] private Vector3 targetRotation;
     //private float speed;
     public event Action<PlayerControl> OntrigerPlaer;
     
@@ -27,32 +32,28 @@ public class PuckMove : MonoBehaviour
     }
     private void Update()
     {
+        Vector3 newDir = Vector3.RotateTowards(arrowDirection.forward, (targetRotation - arrowDirection.position), 1f, 0.0f);
+        arrowDirection.rotation = Quaternion.LookRotation(newDir);
         if (isPlayerTakePuck)
         {
             transform.position = Vector3.Lerp(transform.position, player.transform.position, 1f);
         }
         if (speedPuck > 0)
         {
-            //transform.position = Vector3.MoveTowards(transform.position, target, speedPuck * Time.deltaTime);
-            //GetComponent<Rigidbody2D>().MovePosition(transform.position + target * Time.deltaTime);
             transform.position += velocity * speedPuck * Time.deltaTime;
-            //speedPuck -= Time.deltaTime * slowRate * Mathf.Sqrt(speedPuck);
             speedPuck -=  Mathf.Sqrt(speedPuck * Time.deltaTime * slowRate);
-
-
-
         }
         
     }
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        collision.transform.root.TryGetComponent<PlayerControl>(out PlayerControl playerControl);
-        if (playerControl)
+        collision.transform.root.TryGetComponent<PlayerControl>(out thisPlayerControl);
+        if (collision.name == stickTrigerName)
         {
             isPlayerTakePuck = true;
-            player = playerControl.PuckPoint;
-            OntrigerPlaer.Invoke(playerControl);
-            playerControl.StrikePuck += SetParametrPuck;
+            player = thisPlayerControl.PuckPoint;
+            OntrigerPlaer.Invoke(thisPlayerControl);
+            thisPlayerControl._StrikePuck += SetParametrPuck;
             bc2d.enabled = false;
             speedPuck = 0;
         }
@@ -60,7 +61,6 @@ public class PuckMove : MonoBehaviour
         if (borderStadion)
         {
             isVelositySwapX = false;
-            isVelositySwapY = false;
             if (transform.position.x <= pointStadion[0].position.x || transform.position.x >= pointStadion[4].position.x)
             {
                 velocity.x *= UnityEngine.Random.Range(-0.8f, -1f);
@@ -99,14 +99,7 @@ public class PuckMove : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D collision)
     {
-        collision.transform.root.TryGetComponent<PlayerControl>(out PlayerControl playerControl);
-        if (playerControl)
-        {
-            isPlayerTakePuck = false;
-            playerControl.StrikePuck -= SetParametrPuck;
-            bc2d.enabled = true;
 
-        }
     }
 
     private void SetParametrPuck(float speed, Gate gate)
@@ -117,5 +110,9 @@ public class PuckMove : MonoBehaviour
         velocity = target - transform.position;
         invertVelocity = 3.9f / velocity.x;
         velocity *= invertVelocity;
+        isPlayerTakePuck = false;
+        bc2d.enabled = true;
+        //не могу отписаться от события будут проблемы
+        //thisPlayerControl._StrikePuck -= SetParametrPuck;
     }
 }

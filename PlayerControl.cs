@@ -5,33 +5,42 @@ using UnityEngine;
 
 public class PlayerControl : MonoBehaviour
 {
-    private Rigidbody2D rb;
-    [SerializeField] private float maxSpeed;
-    [SerializeField] private float maxBoostSpeed;
-    [SerializeField] private Transform puckPoint;
-    [SerializeField] private SpriteRenderer sprite;
-    [SerializeField] private PuckMove puck;
-    [SerializeField] private float minStrongStrike;
-    [SerializeField] private float maxStrongStrike;
-    [SerializeField] private Gate gate;
-    [SerializeField] private BoxCollider2D bcTriger;
-    [SerializeField] private BoxCollider2D bcView;
-    private Vector3 target;
-    private float boostSpeed;
-    private float speed;
-    private bool isTrigerBorderGateOn;
-    private float strongStrike;
-    private PlayerControl thisPlayer;
-    private bool isPuckOnMe;
+    [Header("Настройки персонажа")]
 
-    public event Action<float, Gate> StrikePuck;
+    [Tooltip("Скорость персонажа при столкновении")] [Range(0.5f, 1f)] [SerializeField] private float speedInCollision;
+    [Tooltip("Дефолтная скорость персонажа")] [Range(1f, 3f)] [SerializeField] private float minSpeed;
+    [Tooltip("Максимальная скорость персонажа")] [Range(1f, 5f)] [SerializeField] private float maxSpeed;
+    [Tooltip("Ускорение персонажа")] [Range(1f, 3f)] [SerializeField] private float boostSpeed;
+    [Tooltip("Сила удара при привышении лимита")] [Range(0.5f, 1f)] [SerializeField] private float errorStrongStrike;
+    [Tooltip("Минимальная сила удара по шайбе")] [Range(1f, 3f)] [SerializeField] private float minStrongStrike;
+    [Tooltip("Максимальная сила удара по шайбе")] [Range(1f, 5f)] [SerializeField] private float maxStrongStrike;
+    [Tooltip("Ускорение силы удара по шайбе")] [Range(1f, 3f)] [SerializeField] private float bostStrongStrike;
+    [Tooltip("Время восстановления после столкновения")] [Range(1f, 3f)] [SerializeField] private float maxtimerCrash;
+
+    [Header("Вспомогательные элементы")]
+
+    [Tooltip("Точка прилипания шайбы")] [SerializeField] private Transform puckPoint;
+    [Tooltip("Префаб шайбы")] [SerializeField] private PuckMove puck;
+    [Tooltip("Ворота")] [SerializeField] private Gate gate;
+    [Tooltip("Бокс колайдер Клюшки")] [SerializeField] private BoxCollider2D stickTriger;
+
+    [Header("Debug - Не заполнять")]
+
+    [SerializeField] private float speed;
+    [SerializeField] private float strongStrike;
+    [SerializeField] private int CountTrigerBorderGateOn;
+    [SerializeField] private bool isPuckOnMe;
+    [SerializeField] private bool isRightDirection = true;
+    [SerializeField] private bool isCrash = false;
+    [SerializeField] private float timerCrash;
+    [SerializeField] private Vector3 target;
+    public event Action<float, Gate> _StrikePuck;
 
     public Transform PuckPoint => puckPoint;
     private void Awake()
     {
-        speed = maxSpeed;
-        boostSpeed = 1f;
-        isTrigerBorderGateOn = false;
+        speed = minSpeed;
+        CountTrigerBorderGateOn = 0;
         puck.OntrigerPlaer += CheckPlayer;
         strongStrike = minStrongStrike;
         isPuckOnMe = false;
@@ -55,7 +64,10 @@ public class PlayerControl : MonoBehaviour
         {
             if (Input.GetMouseButtonUp(0))
             {
-                _StrikePuck();
+                if (strongStrike != minStrongStrike)
+                {
+                    StrikePuck();
+                }
             }
             if (Input.GetMouseButtonDown(0))
             {
@@ -63,26 +75,31 @@ public class PlayerControl : MonoBehaviour
             }
             if (strongStrike > minStrongStrike)
             {
-                strongStrike += Time.deltaTime;
+                strongStrike += Time.deltaTime * bostStrongStrike;
                 if (strongStrike > maxStrongStrike)
                 {
-                    strongStrike = minStrongStrike / 2;
-                    _StrikePuck();
+                    strongStrike = errorStrongStrike;
+                    StrikePuck();
                 }
                 return;
             }
         }
-        Move();
+        if (!isCrash)
+        {
+            RotationPlayer();
+            Move();
+        } else
+        {
+            CrashMove();
+        }
     }
 
 
-
-    private void _StrikePuck()
+    private void StrikePuck()
     {
-        StrikePuck.Invoke(strongStrike, gate);
+        _StrikePuck.Invoke(strongStrike, gate);
         strongStrike = minStrongStrike;
-        bcTriger.enabled = false;
-        bcView.enabled = false;
+        stickTriger.enabled = false;
         isPuckOnMe = false;
         return;
     }
@@ -91,42 +108,67 @@ public class PlayerControl : MonoBehaviour
     {
         if (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0)
         {
-            if (bcTriger.enabled == false)
+            if (stickTriger.enabled == false)
             {
-                bcTriger.enabled = true;
-                bcView.enabled = true;
+                stickTriger.enabled = true;
             }
         }
         target.x = transform.position.x + Input.GetAxis("Horizontal");
         target.y = transform.position.y + Input.GetAxis("Vertical");
+        target.z = transform.position.z;
+        if (CountTrigerBorderGateOn == 0)
+        {
+            if (Input.GetAxis("Horizontal") == 0)
+                speed = minSpeed;
+            if (Input.GetAxis("Horizontal") == 1 && speed < maxSpeed)
+                speed += Time.deltaTime * boostSpeed;
+            if (Input.GetAxis("Horizontal") == -1 && speed < maxSpeed)
+                speed += Time.deltaTime * boostSpeed;
+        }
+        transform.position = Vector3.Lerp(transform.position, target, speed * Time.deltaTime);
+    }
+
+    private void RotationPlayer()
+    {
         if (Input.GetAxis("Horizontal") < 0)
         {
-            if (!sprite.flipX)
-            {
-                sprite.flipX = true;
-                puckPoint.transform.localPosition *= -1;
-            }
+            gameObject.transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.Euler(new Vector3(0, 180, 0)), 1000);
+            isRightDirection = true;
         }
         if (Input.GetAxis("Horizontal") > 0)
         {
-            if (sprite.flipX)
-            {
-                sprite.flipX = false;
-                puckPoint.transform.localPosition *= -1;
-            }
+            gameObject.transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.Euler(new Vector3(0, 0, 0)), 1000);
+            isRightDirection = false;
         }
-        target.z = transform.position.z;
-        if (Input.GetAxis("Horizontal") == 0)
-            boostSpeed = 1f;
-        if (isTrigerBorderGateOn == false)
-        {
-            if (Input.GetAxis("Horizontal") == 1 && boostSpeed < maxBoostSpeed)
-                boostSpeed += Time.deltaTime;
-            if (Input.GetAxis("Horizontal") == -1 && boostSpeed < maxBoostSpeed)
-                boostSpeed += Time.deltaTime;
-        }
-        transform.position = Vector3.Lerp(transform.position, target, speed * boostSpeed * Time.deltaTime);
     }
+
+    private void SlowSpeed()
+    {
+        CountTrigerBorderGateOn += 1;
+        speed = speedInCollision;
+    }
+    private void NormalizeSpeed()
+    {
+        CountTrigerBorderGateOn -= 1;
+        if (CountTrigerBorderGateOn == 0)
+        {
+            speed = minSpeed;
+        }
+    }
+
+    private void CrashMove()
+    {
+        timerCrash -= Time.deltaTime;
+        if (timerCrash > 0)
+        {
+            //замедляем персонажа 0.1f
+            transform.position = Vector3.Lerp(transform.position, target, speed * 0.1f * Time.deltaTime);
+        } else
+        {
+            isCrash = false;
+        }
+    }
+
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -134,9 +176,15 @@ public class PlayerControl : MonoBehaviour
         collision.transform.root.TryGetComponent<Gate>(out Gate gate);
         if (borderStadion || gate)
         {
-            isTrigerBorderGateOn = true;
-            boostSpeed = 1f;
-            speed = 0.5f;
+            SlowSpeed();
+        }
+        if (gate)
+        {
+            isCrash = true;
+            timerCrash = maxtimerCrash;
+            target.x = transform.position.x - Input.GetAxis("Horizontal");
+            target.y = transform.position.y - Input.GetAxis("Vertical");
+            target.z = transform.position.z;
         }
     }
 
@@ -146,8 +194,9 @@ public class PlayerControl : MonoBehaviour
         collision.transform.root.TryGetComponent<Gate>(out Gate gate);
         if (borderStadion || gate)
         {
-            isTrigerBorderGateOn = false;
-            speed = maxSpeed;
+            NormalizeSpeed();
         }
     }
+
+
 }
