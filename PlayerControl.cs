@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class PlayerControl : MonoBehaviour
 {
     [Header("Настройки персонажа")]
@@ -25,7 +26,6 @@ public class PlayerControl : MonoBehaviour
     [Tooltip("Бокс колайдер Клюшки")] [SerializeField] private BoxCollider2D stickTriger;
 
     [Header("Debug - Не заполнять")]
-
     [SerializeField] private float speed;
     [SerializeField] private float strongStrike;
     [SerializeField] private int CountTrigerBorderGateOn;
@@ -34,6 +34,7 @@ public class PlayerControl : MonoBehaviour
     [SerializeField] private bool isCrash = false;
     [SerializeField] private float timerCrash;
     [SerializeField] private Vector3 target;
+    private UIPlayer uiPlayer;
     public event Action<float, Gate> _StrikePuck;
 
     public Transform PuckPoint => puckPoint;
@@ -44,6 +45,7 @@ public class PlayerControl : MonoBehaviour
         puck.OntrigerPlaer += CheckPlayer;
         strongStrike = minStrongStrike;
         isPuckOnMe = false;
+        gameObject.TryGetComponent<UIPlayer>(out uiPlayer);
     }
 
     private void CheckPlayer(PlayerControl player)
@@ -62,6 +64,8 @@ public class PlayerControl : MonoBehaviour
     {
         if (isPuckOnMe)
         {
+            uiPlayer.SetStrongPuck((strongStrike - minStrongStrike)/(maxStrongStrike - minStrongStrike));
+            Debug.Log((strongStrike - minStrongStrike) / (maxStrongStrike - minStrongStrike));
             if (Input.GetMouseButtonUp(0))
             {
                 if (strongStrike != minStrongStrike)
@@ -72,6 +76,7 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 strongStrike += Time.deltaTime;
+                
             }
             if (strongStrike > minStrongStrike)
             {
@@ -79,6 +84,8 @@ public class PlayerControl : MonoBehaviour
                 if (strongStrike > maxStrongStrike)
                 {
                     strongStrike = errorStrongStrike;
+                    isCrash = true;
+                    timerCrash = maxtimerCrash;
                     StrikePuck();
                 }
                 return;
@@ -94,13 +101,13 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-
     private void StrikePuck()
     {
         _StrikePuck.Invoke(strongStrike, gate);
         strongStrike = minStrongStrike;
         stickTriger.enabled = false;
         isPuckOnMe = false;
+        uiPlayer.SetStrongPuck(0f);
         return;
     }
 
@@ -169,7 +176,6 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-
     private void OnTriggerEnter2D(Collider2D collision)
     {
         collision.transform.root.TryGetComponent<BorderStadion>(out BorderStadion borderStadion);
@@ -197,6 +203,4 @@ public class PlayerControl : MonoBehaviour
             NormalizeSpeed();
         }
     }
-
-
 }
