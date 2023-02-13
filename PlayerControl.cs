@@ -64,8 +64,8 @@ public class PlayerControl : MonoBehaviour
     {
         if (isPuckOnMe)
         {
-            uiPlayer.SetStrongPuck((strongStrike - minStrongStrike)/(maxStrongStrike - minStrongStrike));
-            Debug.Log((strongStrike - minStrongStrike) / (maxStrongStrike - minStrongStrike));
+            
+            Debug.Log(strongStrike);
             if (Input.GetMouseButtonUp(0))
             {
                 if (strongStrike != minStrongStrike)
@@ -76,10 +76,10 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 strongStrike += Time.deltaTime;
-                
             }
             if (strongStrike > minStrongStrike)
             {
+                uiPlayer.SetStrongPuck((strongStrike - minStrongStrike) / (maxStrongStrike - minStrongStrike));
                 strongStrike += Time.deltaTime * bostStrongStrike;
                 if (strongStrike > maxStrongStrike)
                 {
